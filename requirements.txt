@@ -1,0 +1,8 @@
+# No external dependencies required
+# Python standard library modules used:
+# - mailbox (for parsing MBOX files)
+# - email (for email parsing)
+# - pathlib (for file path handling)
+# - re (for regex)
+# - datetime (for date handling)
+
