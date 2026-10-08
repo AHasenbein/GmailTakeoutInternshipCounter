@@ -76,16 +76,22 @@ class InternshipApplicationCounter:
         'thank you =',
     ]
     
-    def __init__(self, mbox_path: str):
+    def __init__(self, mbox_path: str, name: str = ''):
         """
         Initialize the counter with an MBOX file path.
         
         Args:
             mbox_path: Path to the MBOX file or directory containing MBOX files
+            name: Your name as it appears in your From/To headers, used to spot sent mail
         """
         self.mbox_path = Path(mbox_path)
         self.applications: List[Dict] = []
         self.unique_companies: Set[str] = set()
+        self.name = name.lower().strip()
+
+    def _is_me(self, field: str) -> bool:
+        """True if a From/To header contains the user's name."""
+        return bool(self.name) and self.name in field
         
     def _is_application_email(self, message) -> bool:
         """
@@ -167,11 +173,10 @@ class InternshipApplicationCounter:
         # Check multiple indicators that this is a sent email
         is_sent = (
             'sent' in labels or
-            'hasenbein' in from_field or
-            (from_field.endswith('@gmail.com') and 'hasenbein' in from_field) or
+            self._is_me(from_field) or
             'me' in from_field or
-            # If From contains your email and To is a company email, it's likely sent
-            ('hasenbein' in from_field or 'alex' in from_field) and 
+            # If From contains your name and To is a company email, it's likely sent
+            self._is_me(from_field) and
             to_field and '@' in to_field and not to_field.endswith('@gmail.com')
         )
         
@@ -379,7 +384,7 @@ class InternshipApplicationCounter:
             if has_internship and has_application:
                 # Check if it's from a company (not personal email)
                 to_field = message.get('To', '').lower()
-                if 'hasenbein' in to_field or '@gmail.com' in to_field:
+                if self._is_me(to_field) or '@gmail.com' in to_field:
                     # Likely a confirmation, exclude unless very specific
                     if 'submitted' in text or 'submitted your' in text:
                         return True
@@ -417,7 +422,7 @@ class InternshipApplicationCounter:
         labels = message.get('X-Gmail-Labels', '').lower()
         
         # Determine if this is a sent email
-        is_sent = 'sent' in labels or 'hasenbein' in from_field.lower()
+        is_sent = 'sent' in labels or self._is_me(from_field.lower())
         
         # For sent emails, check the To field; for received, check From field
         email_address = to_field if is_sent else from_field
@@ -554,6 +559,12 @@ def main():
         type=str,
         help='Path to MBOX file or directory containing MBOX files'
     )
+    parser.add_argument(
+        '--name',
+        type=str,
+        default='',
+        help='Your name as it appears in email headers (e.g. your last name), used to detect sent mail'
+    )
     
     args = parser.parse_args()
     
@@ -563,7 +574,7 @@ def main():
         return
     
     # Create counter and parse
-    counter = InternshipApplicationCounter(args.mbox_path)
+    counter = InternshipApplicationCounter(args.mbox_path, args.name)
     counter.parse()
     counter.print_summary()
 

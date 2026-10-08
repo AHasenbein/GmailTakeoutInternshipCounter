@@ -37,6 +37,11 @@ python email_parser.py path/to/your/email.mbox
 python email_parser.py path/to/your/takeout/folder
 ```
 
+**Pass your name** (as it appears in your From header, e.g. your last name) so emails you sent are detected more accurately:
+```bash
+python email_parser.py path/to/your/takeout/folder --name smith
+```
+
 ### Example Output
 
 ```
